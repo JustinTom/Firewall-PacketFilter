@@ -11,8 +11,8 @@ echo "What is the subnet of your internal network? (eg. 192.168.10.0/24)"
 read subnet
 
 #Lets the test machine know where to reach the target host through the firewall being the new gateway
-echo "Adding routing rule to allow this machine to properly send packets to target host"
-route add -net $subnet gw $firewallIP
+#echo "Adding routing rule to allow this machine to properly send packets to target host"
+#route add -net $subnet gw $firewallIP
 
 echo "----------End of Setting up Testing Parameters----------"
 

@@ -3,7 +3,7 @@
 ###### Start User Configurable Section ######
 
 #Default allow FTP data, FTP control, SSH, DNS, HTTP, HTTPS ports respectively with TCP protocol
-TCPArray=( 20 21 22 )
+TCPArray=( 20 21 22 80 443 )
 #Default allow DNS, DHCP (2) ports respectively with UDP protocol.
 UDPArray=( )
 #Default allow regular echo-reply, port unreachable reply, and echo-request ports respectively used with ICMP.
@@ -11,6 +11,9 @@ ICMPArray=( 0 3 8 )
 
 echo "What is the internal subnet of your network? (eg. 192.168.10.0/24)"
 read internalSubnet
+
+echo "What is the internal IP of your firewall? (eg. 192.168.10.1)"
+read internalFirewallIP
 
 echo "What is the name of your internal network card? (eg. p3p1)"
 read privNet
@@ -20,7 +23,7 @@ read pubNet
 
 echo "What TCP service ports would you like to be allowed on the firewall?"
 echo "Usage: 1,2,3"
-echo "Recommended 53,80,443 for DNS, HTTP and HTTPS"
+echo "Recommended 53 for DNS"
 read TCPTemp
 
 OIFS=$IFS
@@ -88,7 +91,7 @@ iptables -A ICMP_Out -j ACCEPT
 #iptables -A OUTPUT -p udp --dport 67:68 -m state -j ACCEPT
 
 #Drop all packets destined for the firewall host from the outside
-iptables -A INPUT -i $pubNet -j DROP
+iptables -A INPUT -i $pubNet -d $internalFirewallIP -j DROP
 
 #Drop packets with source address matching our internal network
 iptables -A FORWARD -i $pubNet -s $internalSubnet -j DROP
@@ -108,8 +111,11 @@ iptables -A FORWARD -i $pubNet -o $privNet -p udp --dport 137:139 -j DROP
 iptables -A FORWARD -i $pubNet -o $privNet -p tcp --dport 111 -j DROP
 iptables -A FORWARD -i $pubNet -o $privNet -p tcp --dport 515 -j DROP
 
+#Drop inbound traffic to port 80 (http) from source ports less than 1024.
+iptables -A FORWARD -p tcp --dport 80 --sport 0:1023 -j DROP
+
 #Reject those connections that are coming the "wrong" way (incomming SYN to high ports)
-iptables -A FORWARD -i $pubNet -o $privNet -p tcp --tcp-flags ALL SYN ! --dport 0:1023 -j DROP -m comment --comment "Drop all high port connections that are coming the wrong way"
+iptables -A FORWARD -i $pubNet -o $privNet -p tcp --tcp-flags ALL SYN ! --dport 0:1024 -j DROP -m comment --comment "Drop all high port connections that are coming the wrong way"
 #iptables -A FORWARD -i $pubNet -o $privNet -p tcp --dport 0:1023 -j DROP
 #iptables -A FORWARD -i $pubNet -o $privNet -p udp --dport 0:1023 -j DROP
 

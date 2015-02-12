@@ -3,6 +3,9 @@
 echo "What is the internal(subnet) IP address of your internal firewall? (eg. 192.168.10.1)"
 read internalFirewallIP
 
+echo "What is the internal(subnet) IP address of your internal host? (eg. 192.168.10.2)"
+read internalHostIP
+
 echo "What is the name of your internal network card? (eg. p3p1)"
 read privNet
 
@@ -11,6 +14,9 @@ read externalFirewallIP
 
 echo "What is the name of your external network card? (eg. em1)"
 read pubNet
+
+echo "What is the subnet of your internal network? (eg. 192.168.10.0/24)"
+read subnet
 
 #Removes the last digits before the decimal and adds a 0 for the subnet
 externalSubnet="${externalFirewallIP%.*}"
@@ -29,6 +35,10 @@ route add -net $internalSubnet netmask 255.255.255.0 gw $externalFirewallIP
 route add -net $externalSubnet/24 gw $internalFirewallIP
 
 #Allows any outbound connections to work from the internal network
-iptables -t nat -A POSTROUTING -o $pubNet -j MASQUERADE
+#Mask all outgoing as the firewall's external IP
+iptables -t nat -A POSTROUTING -s $subnet -o em1 -j SNAT --to-source $externalFirewallIP
+
+#Direct all incoming packets to internal host
+iptables -t nat -A PREROUTING -i em1 -j DNAT --to-destination $internalHostIP
 
 echo "Firewall host configuration complete!"
